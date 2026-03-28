@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NuanceTranslate</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; padding: 16px; }
+
+.app { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+
+.header { text-align: center; padding: 16px 0 8px; }
+.header h1 { font-size: 26px; font-weight: 600; color: #1a1a1a; letter-spacing: -0.5px; }
+.header p { font-size: 13px; color: #666; margin-top: 4px; }
+
+.api-panel { background: #e8f0fe; border: 1px solid #c5d5f8; border-radius: 12px; padding: 12px 14px; }
+.api-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.api-label { font-size: 12px; font-weight: 600; color: #1a56db; }
+.api-row { display: flex; gap: 8px; }
+.api-input { flex: 1; font-size: 13px; padding: 7px 10px; border-radius: 8px; border: 1px solid #c5d5f8; background: #fff; font-family: monospace; }
+.api-input:focus { outline: 2px solid #3b82f6; border-color: transparent; }
+.api-save-btn { font-size: 12px; font-weight: 600; padding: 7px 14px; border-radius: 8px; border: none; background: #1a56db; color: #fff; cursor: pointer; white-space: nowrap; }
+.api-save-btn:hover { background: #1447c0; }
+.api-status { font-size: 11px; margin-top: 6px; }
+.api-ok { color: #16a34a; } .api-ng { color: #dc2626; }
+
+.lang-bar { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #e0e0d8; border-radius: 12px; padding: 10px 14px; }
+select { flex: 1; font-size: 14px; font-weight: 500; color: #1a1a1a; background: #f5f5f0; border: 1px solid #e0e0d8; border-radius: 8px; padding: 7px 28px 7px 10px; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+.swap-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #d0d0c8; background: #fff; cursor: pointer; font-size: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.swap-btn:hover { background: #f5f5f0; }
+
+.tone-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+.tone-btn { font-size: 12px; padding: 5px 14px; border-radius: 20px; border: 1px solid #d0d0c8; background: #fff; color: #555; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.tone-btn:hover { background: #f5f5f0; color: #1a1a1a; }
+.tone-btn.active { background: #e8f0fe; color: #1a56db; border-color: #c5d5f8; font-weight: 600; }
+
+.panel { background: #fff; border: 1px solid #e0e0d8; border-radius: 12px; overflow: hidden; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 6px; }
+.panel-label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.panel-actions { display: flex; gap: 6px; }
+.icon-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e0e0d8; background: transparent; cursor: pointer; font-size: 15px; color: #666; display: flex; align-items: center; justify-content: center; font-family: inherit; }
+.icon-btn:hover { background: #f5f5f0; }
+.icon-btn.active { background: #e8f0fe; color: #1a56db; border-color: #c5d5f8; }
+
+textarea { width: 100%; border: none; outline: none; resize: none; font-size: 16px; font-family: inherit; color: #1a1a1a; background: transparent; padding: 8px 14px 14px; min-height: 130px; line-height: 1.6; }
+textarea::placeholder { color: #bbb; }
+
+.result-area { padding: 8px 14px 14px; min-height: 130px; font-size: 16px; line-height: 1.6; color: #1a1a1a; white-space: pre-wrap; }
+.result-placeholder { color: #bbb; }
+
+.loading-dots { display: flex; gap: 4px; align-items: center; padding: 8px 0; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; animation: bounce 1.2s infinite; }
+.dot:nth-child(2) { animation-delay: 0.2s; } .dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,80%,100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+.bottom-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 10px; border-top: 1px solid #f0f0e8; }
+.char-count { font-size: 11px; color: #bbb; }
+.translate-btn { font-size: 13px; font-weight: 600; padding: 8px 20px; border-radius: 8px; border: none; background: #1a1a1a; color: #fff; cursor: pointer; font-family: inherit; }
+.translate-btn:hover { background: #333; }
+.translate-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.result-panel { position: relative; }
+.copy-toast { position: absolute; right: 14px; bottom: 10px; font-size: 12px; background: #dcfce7; color: #16a34a; padding: 4px 10px; border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.copy-toast.show { opacity: 1; }
+
+.history-section { background: #fff; border: 1px solid #e0e0d8; border-radius: 12px; overflow: hidden; }
+.history-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #f0f0e8; }
+.history-title { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+.clear-all-btn { font-size: 11px; color: #bbb; background: none; border: none; cursor: pointer; font-family: inherit; padding: 2px 6px; border-radius: 6px; }
+.clear-all-btn:hover { background: #fee2e2; color: #dc2626; }
+.history-empty { padding: 20px; font-size: 13px; color: #bbb; text-align: center; }
+.history-item { padding: 10px 14px; border-bottom: 1px solid #f0f0e8; cursor: pointer; display: flex; align-items: flex-start; gap: 8px; }
+.history-item:last-child { border-bottom: none; }
+.history-item:hover { background: #fafaf8; }
+.history-content { flex: 1; min-width: 0; }
+.history-src { font-size: 13px; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-tgt { font-size: 12px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.history-meta { font-size: 11px; color: #bbb; margin-top: 2px; }
+.del-btn { width: 24px; height: 24px; border-radius: 6px; border: none; background: transparent; cursor: pointer; font-size: 12px; color: #bbb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: inherit; }
+.del-btn:hover { background: #fee2e2; color: #dc2626; }
+
+@media (max-width: 500px) {
+  body { padding: 10px; }
+  .tone-btn { font-size: 11px; padding: 4px 10px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>NuanceTranslate</h1>
+    <p>ニュアンス・感情・スラングを保った自然な翻訳</p>
+  </div>
+
+  <div class="api-panel">
+    <div class="api-panel-header">
+      <span class="api-label">Anthropic APIキー</span>
+      <a href="https://console.anthropic.com/settings/keys" target="_blank" style="font-size:11px;color:#1a56db;">キーを取得 →</a>
+    </div>
+    <div class="api-row">
+      <input class="api-input" type="password" id="apiKeyInput" placeholder="sk-ant-..." />
+      <button class="api-save-btn" id="apiSaveBtn">保存</button>
+    </div>
+    <div class="api-status" id="apiStatus"></div>
+  </div>
+
+  <div class="lang-bar">
+    <select id="srcLang">
+      <option value="ja">日本語</option>
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="ca">Català</option>
+    </select>
+    <button class="swap-btn" id="swapBtn">⇄</button>
+    <select id="tgtLang">
+      <option value="en">English</option>
+      <option value="ja">日本語</option>
+      <option value="es">Español</option>
+      <option value="ca">Català</option>
+    </select>
+  </div>
+
+  <div class="tone-bar">
+    <button class="tone-btn active" data-tone="casual">カジュアル</button>
+    <button class="tone-btn" data-tone="business">ビジネス</button>
+    <button class="tone-btn" data-tone="polite">丁寧</button>
+    <button class="tone-btn" data-tone="email">メール用</button>
+    <button class="tone-btn" data-tone="menu">メニュー</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-label" id="srcLabel">原文</span>
+      <div class="panel-actions">
+        <button class="icon-btn" id="micBtn" title="音声入力">🎙</button>
+        <button class="icon-btn" id="camBtn" title="カメラ">📷</button>
+        <button class="icon-btn" id="clearBtn" title="クリア">✕</button>
+      </div>
+    </div>
+    <textarea id="inputText" placeholder="翻訳したいテキストを入力..."></textarea>
+    <div class="bottom-bar">
+      <span class="char-count" id="charCount">0 文字</span>
+      <button class="translate-btn" id="translateBtn">翻訳する</button>
+    </div>
+  </div>
+
+  <div class="panel result-panel">
+    <div class="panel-header">
+      <span class="panel-label" id="tgtLabel">翻訳結果</span>
+      <div class="panel-actions">
+        <button class="icon-btn" id="copyBtn">⎘</button>
+        <button class="icon-btn" id="favBtn">☆</button>
+      </div>
+    </div>
+    <div class="result-area" id="resultArea">
+      <span class="result-placeholder">翻訳結果がここに表示されます</span>
+    </div>
+    <div class="copy-toast" id="copyToast">コピーしました</div>
+  </div>
+
+  <div class="history-section">
+    <div class="history-header">
+      <span class="history-title" id="historyTitle">翻訳履歴</span>
+      <button class="clear-all-btn" id="clearAllBtn">すべて削除</button>
+    </div>
+    <div id="historyList">
+      <div class="history-empty" id="historyEmpty">履歴はまだありません</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LANGS = {
+  ja: { src: '原文', result: '翻訳結果', placeholder: '翻訳したいテキストを入力...', history: '翻訳履歴', translate: '翻訳する', chars: '文字', empty: '履歴はまだありません', clearAll: 'すべて削除', copy: 'コピーしました' },
+  en: { src: 'Source', result: 'Translation', placeholder: 'Enter text to translate...', history: 'History', translate: 'Translate', chars: 'chars', empty: 'No history yet', clearAll: 'Clear all', copy: 'Copied!' },
+  es: { src: 'Texto original', result: 'Traducción', placeholder: 'Escribe el texto a traducir...', history: 'Historial', translate: 'Traducir', chars: 'caracteres', empty: 'Sin historial', clearAll: 'Borrar todo', copy: '¡Copiado!' },
+  ca: { src: 'Text original', result: 'Traducció', placeholder: 'Escriu el text a traduir...', history: 'Historial', translate: 'Traduir', chars: 'caràcters', empty: 'Sense historial', clearAll: 'Esborrar tot', copy: 'Copiat!' }
+};
+const TONES = {
+  casual:   { ja:'カジュアル', en:'Casual',   es:'Casual',  ca:'Informal' },
+  business: { ja:'ビジネス',   en:'Business', es:'Negocio', ca:'Negoci' },
+  polite:   { ja:'丁寧',       en:'Polite',   es:'Educado', ca:'Educat' },
+  email:    { ja:'メール用',   en:'Email',    es:'Correo',  ca:'Correu' },
+  menu:     { ja:'メニュー',   en:'Menu',     es:'Menú',    ca:'Menú' }
+};
+
+let state = {
+  srcLang: 'ja', tgtLang: 'en', tone: 'casual',
+  history: [],
+  isLoading: false, currentResult: '',
+  apiKey: localStorage.getItem('nuance_api_key') || '',
+  isListening: false, recognition: null
+};
+try { state.history = JSON.parse(localStorage.getItem('nuance_history') || '[]'); } catch(e) {}
+
+const $ = id => document.getElementById(id);
+const getLang = () => LANGS[state.srcLang] || LANGS.en;
+
+function updateUI() {
+  const L = getLang();
+  $('srcLabel').textContent = L.src;
+  $('tgtLabel').textContent = L.result;
+  $('inputText').placeholder = L.placeholder;
+  $('historyTitle').textContent = L.history;
+  $('translateBtn').textContent = L.translate;
+  $('clearAllBtn').textContent = L.clearAll;
+  $('historyEmpty').textContent = L.empty;
+  document.querySelectorAll('.tone-btn').forEach(btn => {
+    btn.textContent = TONES[btn.dataset.tone][state.srcLang] || TONES[btn.dataset.tone].en;
+  });
+  updateCharCount();
+}
+
+function updateCharCount() {
+  $('charCount').textContent = `${$('inputText').value.length} ${getLang().chars}`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderHistory() {
+  const list = $('historyList');
+  list.querySelectorAll('.history-item').forEach(i => i.remove());
+  if (state.history.length === 0) { $('historyEmpty').style.display = 'block'; return; }
+  $('historyEmpty').style.display = 'none';
+  state.history.slice().reverse().forEach((item, idx) => {
+    const realIdx = state.history.length - 1 - idx;
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `<div class="history-content"><div class="history-src">${escHtml(item.src)}</div><div class="history-tgt">${escHtml(item.tgt)}</div><div class="history-meta">${escHtml(item.srcLang)} → ${escHtml(item.tgtLang)} · ${escHtml(item.tone)} · ${escHtml(item.time)}</div></div><button class="del-btn" data-idx="${realIdx}">✕</button>`;
+    div.addEventListener('click', e => {
+      if (e.target.classList.contains('del-btn')) return;
+      $('inputText').value = item.src;
+      $('resultArea').textContent = item.tgt;
+      state.currentResult = item.tgt;
+      updateCharCount();
+    });
+    div.querySelector('.del-btn').addEventListener('click', () => {
+      state.history.splice(realIdx, 1);
+      localStorage.setItem('nuance_history', JSON.stringify(state.history));
+      renderHistory();
+    });
+    list.appendChild(div);
+  });
+}
+
+function buildPrompt(text, srcLang, tgtLang, tone) {
+  const toneMap = {
+    casual: 'カジュアルで友達同士が話すような自然な口語表現。スラングや略語も適切に使う。',
+    business: 'ビジネスシーンで使えるプロフェッショナルだが自然な表現。',
+    polite: '丁寧で礼儀正しく、温かみのある表現。',
+    email: 'ビジネスメールとしてそのままコピペできる形式。適切な挨拶から締めまで含める。',
+    menu: 'メニュー名の翻訳＋料理の説明（食材・調理法・味の特徴）を加える。'
+  };
+  return `以下の文章を翻訳してください。\n翻訳方向: ${LANGS[srcLang]?.src||srcLang} → ${LANGS[tgtLang]?.src||tgtLang}\nスタイル: ${toneMap[tone]||toneMap.casual}\n\nルール:\n- 直訳禁止\n- ニュアンス・感情・スラングを維持\n- ネイティブが自然に使う表現\n- 翻訳結果のみ返す（説明不要）\n\n原文:\n${text}`;
+}
+
+async function callAPI(messages) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': state.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.content?.map(c => c.text || '').join('') || '';
+}
+
+async function translate() {
+  const text = $('inputText').value.trim();
+  if (!text || state.isLoading) return;
+  if (!state.apiKey) {
+    $('apiStatus').textContent = 'APIキーを入力して保存してください';
+    $('apiStatus').className = 'api-status api-ng';
+    $('apiKeyInput').focus();
+    return;
+  }
+  if (state.srcLang === state.tgtLang) { $('resultArea').textContent = text; state.currentResult = text; return; }
+
+  state.isLoading = true;
+  $('translateBtn').disabled = true;
+  $('resultArea').innerHTML = '<div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+  try {
+    const result = await callAPI([{ role: 'user', content: buildPrompt(text, state.srcLang, state.tgtLang, state.tone) }]);
+    state.currentResult = result;
+    $('resultArea').textContent = result;
+    const now = new Date();
+    state.history.push({ src: text, tgt: result, srcLang: LANGS[state.srcLang]?.src||state.srcLang, tgtLang: LANGS[state.tgtLang]?.src||state.tgtLang, tone: TONES[state.tone][state.srcLang]||state.tone, time: now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) });
+    if (state.history.length > 50) state.history.shift();
+    localStorage.setItem('nuance_history', JSON.stringify(state.history));
+    renderHistory();
+  } catch(e) {
+    $('resultArea').textContent = 'エラー: ' + (e.message || '翻訳に失敗しました');
+  } finally {
+    state.isLoading = false;
+    $('translateBtn').disabled = false;
+  }
+}
+
+$('apiSaveBtn').addEventListener('click', () => {
+  const key = $('apiKeyInput').value.trim();
+  if (!key.startsWith('sk-ant-')) {
+    $('apiStatus').textContent = '有効なAPIキーを入力してください（sk-ant- で始まります）';
+    $('apiStatus').className = 'api-status api-ng';
+    return;
+  }
+  state.apiKey = key;
+  localStorage.setItem('nuance_api_key', key);
+  $('apiStatus').textContent = 'APIキーを保存しました！翻訳できます。';
+  $('apiStatus').className = 'api-status api-ok';
+  $('apiKeyInput').value = '••••••••••••••••••••••' + key.slice(-4);
+});
+
+if (state.apiKey) {
+  $('apiKeyInput').value = '••••••••••••••••••••••' + state.apiKey.slice(-4);
+  $('apiStatus').textContent = 'APIキーが設定済みです';
+  $('apiStatus').className = 'api-status api-ok';
+}
+
+$('swapBtn').addEventListener('click', () => {
+  [state.srcLang, state.tgtLang] = [state.tgtLang, state.srcLang];
+  $('srcLang').value = state.srcLang;
+  $('tgtLang').value = state.tgtLang;
+  const oldInput = $('inputText').value;
+  if (state.currentResult) { $('inputText').value = state.currentResult; $('resultArea').textContent = oldInput; state.currentResult = oldInput; }
+  updateUI();
+});
+
+$('srcLang').addEventListener('change', e => {
+  state.srcLang = e.target.value;
+  if (state.srcLang === state.tgtLang) { state.tgtLang = state.srcLang === 'ja' ? 'en' : 'ja'; $('tgtLang').value = state.tgtLang; }
+  updateUI();
+});
+$('tgtLang').addEventListener('change', e => {
+  state.tgtLang = e.target.value;
+  if (state.srcLang === state.tgtLang) { state.srcLang = state.tgtLang === 'ja' ? 'en' : 'ja'; $('srcLang').value = state.srcLang; }
+  updateUI();
+});
+
+document.querySelectorAll('.tone-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.tone = btn.dataset.tone;
+  });
+});
+
+$('inputText').addEventListener('input', updateCharCount);
+$('translateBtn').addEventListener('click', translate);
+$('inputText').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) translate(); });
+
+$('clearBtn').addEventListener('click', () => {
+  $('inputText').value = '';
+  $('resultArea').innerHTML = `<span class="result-placeholder">${getLang().result}</span>`;
+  state.currentResult = '';
+  updateCharCount();
+});
+
+$('copyBtn').addEventListener('click', () => {
+  if (!state.currentResult) return;
+  navigator.clipboard.writeText(state.currentResult).then(() => {
+    const toast = $('copyToast');
+    toast.textContent = getLang().copy;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  });
+});
+
+$('favBtn').addEventListener('click', () => {
+  $('favBtn').textContent = $('favBtn').textContent === '☆' ? '★' : '☆';
+  $('favBtn').classList.toggle('active');
+});
+
+$('clearAllBtn').addEventListener('click', () => {
+  state.history = [];
+  localStorage.setItem('nuance_history', JSON.stringify(state.history));
+  renderHistory();
+});
+
+$('micBtn').addEventListener('click', () => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('このブラウザは音声入力に対応していません'); return; }
+  if (state.isListening) { state.recognition?.stop(); return; }
+  state.recognition = new SR();
+  state.recognition.lang = state.srcLang === 'ja' ? 'ja-JP' : state.srcLang === 'es' ? 'es-ES' : state.srcLang === 'ca' ? 'ca-ES' : 'en-US';
+  state.recognition.onstart = () => { state.isListening = true; $('micBtn').classList.add('active'); };
+  state.recognition.onresult = e => { $('inputText').value = e.results[0][0].transcript; updateCharCount(); translate(); };
+  state.recognition.onend = () => { state.isListening = false; $('micBtn').classList.remove('active'); };
+  state.recognition.start();
+});
+
+$('camBtn').addEventListener('click', () => {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment';
+  input.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      const b64 = ev.target.result.split(',')[1];
+      state.isLoading = true;
+      $('translateBtn').disabled = true;
+      $('resultArea').innerHTML = '<div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+      try {
+        const tgtName = LANGS[state.tgtLang]?.src || state.tgtLang;
+        const menuNote = state.tone === 'menu' ? 'メニューの場合は料理名の翻訳と説明を加えてください。' : '';
+        const result = await callAPI([{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: file.type, data: b64 } },
+          { type: 'text', text: `この画像のテキストを読み取り、${tgtName}に自然なニュアンスで翻訳してください。${menuNote}翻訳結果のみを返してください。` }
+        ]}]);
+        state.currentResult = result;
+        $('resultArea').textContent = result;
+        $('inputText').value = '[カメラ画像から読み取り]';
+        updateCharCount();
+        const now = new Date();
+        state.history.push({ src:'[カメラ画像]', tgt:result, srcLang:'Camera', tgtLang:LANGS[state.tgtLang]?.src||state.tgtLang, tone:state.tone, time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) });
+        localStorage.setItem('nuance_history', JSON.stringify(state.history));
+        renderHistory();
+      } catch(e) {
+        $('resultArea').textContent = 'エラー: ' + e.message;
+      } finally {
+        state.isLoading = false;
+        $('translateBtn').disabled = false;
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+});
+
+updateUI();
+renderHistory();
+</script>
+</body>
+</html>
